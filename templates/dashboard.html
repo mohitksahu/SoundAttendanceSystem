@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sound Attendance System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">Sound Attendance System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports">Reports</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Attendance Dashboard</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Total Students</h5>
+                                        <h2 id="totalStudents">0</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Present Today</h5>
+                                        <h2 id="presentToday">0</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-danger text-white">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Absent Today</h5>
+                                        <h2 id="absentToday">0</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">Attendance Records</h5>
+                                            <div>
+                                                <input type="date" id="attendanceDate" class="form-control" value="">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Student ID</th>
+                                                        <th>Name</th>
+                                                        <th>Status</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="attendanceTable">
+                                                    <!-- Attendance data will be loaded here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set today's date as default
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = formattedDate;
+            
+            // Load attendance data for today
+            loadAttendanceData(formattedDate);
+            
+            // Add event listener for date change
+            document.getElementById('attendanceDate').addEventListener('change', function() {
+                loadAttendanceData(this.value);
+            });
+        });
+        
+        function loadAttendanceData(date) {
+            fetch(`/get_attendance?date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateDashboard(data.data);
+                    } else {
+                        console.error('Error loading attendance data:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        function updateDashboard(attendanceData) {
+            const tableBody = document.getElementById('attendanceTable');
+            tableBody.innerHTML = '';
+            
+            let presentCount = 0;
+            let absentCount = 0;
+            
+            attendanceData.forEach(student => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${student.STUDENT_ID}</td>
+                    <td>${student.STUDENT_NAME}</td>
+                    <td>
+                        <span class="badge ${student.STATUS === 'Present' ? 'bg-success' : 'bg-danger'}">
+                            ${student.STATUS}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm ${student.STATUS === 'Present' ? 'btn-danger' : 'btn-success'}" 
+                                onclick="toggleAttendance('${student.STUDENT_ID}', ${student.STATUS === 'Present' ? 'false' : 'true'})">
+                            ${student.STATUS === 'Present' ? 'Mark Absent' : 'Mark Present'}
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+                
+                if (student.STATUS === 'Present') {
+                    presentCount++;
+                } else {
+                    absentCount++;
+                }
+            });
+            
+            document.getElementById('totalStudents').textContent = attendanceData.length;
+            document.getElementById('presentToday').textContent = presentCount;
+            document.getElementById('absentToday').textContent = absentCount;
+        }
+        
+        function toggleAttendance(studentId, present) {
+            fetch('/mark_attendance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    present: present
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload attendance data
+                    const date = document.getElementById('attendanceDate').value;
+                    loadAttendanceData(date);
+                } else {
+                    console.error('Error updating attendance:', data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

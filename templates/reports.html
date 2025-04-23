@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Sound Attendance System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">Sound Attendance System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/reports">Reports</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Attendance Reports</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Student Report</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="studentSelect" class="form-label">Select Student</label>
+                                            <select id="studentSelect" class="form-select">
+                                                <option value="">Select a student</option>
+                                                <!-- Students will be loaded here -->
+                                            </select>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="startDate" class="form-label">Start Date</label>
+                                                    <input type="date" id="startDate" class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="endDate" class="form-label">End Date</label>
+                                                    <input type="date" id="endDate" class="form-control">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button id="generateStudentReport" class="btn btn-primary">Generate Report</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Date Range Report</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="rangeDateStart" class="form-label">Start Date</label>
+                                                    <input type="date" id="rangeDateStart" class="form-control">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="rangeDateEnd" class="form-label">End Date</label>
+                                                    <input type="date" id="rangeDateEnd" class="form-control">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button id="generateRangeReport" class="btn btn-primary">Generate Report</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Report Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead id="reportTableHead">
+                                            <!-- Table header will be dynamically generated -->
+                                        </thead>
+                                        <tbody id="reportTableBody">
+                                            <!-- Report data will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3">
+                                    <button id="exportReport" class="btn btn-success" disabled>Export to CSV</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default dates (current month)
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            const formatDate = date => date.toISOString().split('T')[0];
+            
+            document.getElementById('startDate').value = formatDate(firstDay);
+            document.getElementById('endDate').value = formatDate(today);
+            document.getElementById('rangeDateStart').value = formatDate(firstDay);
+            document.getElementById('rangeDateEnd').value = formatDate(today);
+            
+            // Load students
+            loadStudents();
+            
+            // Add event listeners
+            document.getElementById('generateStudentReport').addEventListener('click', generateStudentReport);
+            document.getElementById('generateRangeReport').addEventListener('click', generateRangeReport);
+            document.getElementById('exportReport').addEventListener('click', exportReportToCSV);
+        });
+        
+        function loadStudents() {
+            fetch('/get_students')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const studentSelect = document.getElementById('studentSelect');
+                        data.data.forEach(student => {
+                            const option = document.createElement('option');
+                            option.value = student.STUDENT_ID;
+                            option.textContent = `${student.STUDENT_NAME} (${student.STUDENT_ID})`;
+                            studentSelect.appendChild(option);
+                        });
+                    } else {
+                        console.error('Error loading students:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        function generateStudentReport() {
+            const studentId = document.getElementById('studentSelect').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!studentId) {
+                alert('Please select a student');
+                return;
+            }
+            
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            // This would be a real API call in a complete implementation
+            // For now, we'll simulate the data
+            const reportData = {
+                studentName: document.getElementById('studentSelect').options[document.getElementById('studentSelect').selectedIndex].text,
+                studentId: studentId,
+                startDate: startDate,
+                endDate: endDate,
+                attendanceRecords: [
+                    { date: '2023-10-01', status: 'Present' },
+                    { date: '2023-10-02', status: 'Present' },
+                    { date: '2023-10-03', status: 'Absent' },
+                    { date: '2023-10-04', status: 'Present' },
+                    { date: '2023-10-05', status: 'Present' }
+                ]
+            };
+            
+            displayStudentReport(reportData);
+            document.getElementById('exportReport').disabled = false;
+        }
+        
+        function generateRangeReport() {
+            const startDate = document.getElementById('rangeDateStart').value;
+            const endDate = document.getElementById('rangeDateEnd').value;
+            
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            // This would be a real API call in a complete implementation
+            // For now, we'll simulate the data
+            const reportData = {
+                startDate: startDate,
+                endDate: endDate,
+                attendanceSummary: [
+                    { studentId: '1001', studentName: 'John Doe', presentDays: 18, absentDays: 2, percentage: 90 },
+                    { studentId: '1002', studentName: 'Jane Smith', presentDays: 20, absentDays: 0, percentage: 100 },
+                    { studentId: '1003', studentName: 'Bob Johnson', presentDays: 15, absentDays: 5, percentage: 75 }
+                ]
+            };
+            
+            displayRangeReport(reportData);
+            document.getElementById('exportReport').disabled = false;
+        }
+        
+        function displayStudentReport(data) {
+            const tableHead = document.getElementById('reportTableHead');
+            const tableBody = document.getElementById('reportTableBody');
+            
+            // Clear previous data
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+            
+            // Create header row
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `
+                <th>Date</th>
+                <th>Status</th>
+            `;
+            tableHead.appendChild(headerRow);
+            
+            // Create data rows
+            data.attendanceRecords.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>
+                        <span class="badge ${record.status === 'Present' ? 'bg-success' : 'bg-danger'}">
+                            ${record.status}
+                        </span>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Add summary row
+            const presentCount = data.attendanceRecords.filter(r => r.status === 'Present').length;
+            const totalDays = data.attendanceRecords.length;
+            const percentage = (presentCount / totalDays * 100).toFixed(2);
+            
+            const summaryRow = document.createElement('tr');
+            summaryRow.className = 'table-info';
+            summaryRow.innerHTML = `
+                <td><strong>Summary</strong></td>
+                <td><strong>Present: ${presentCount}/${totalDays} (${percentage}%)</strong></td>
+            `;
+            tableBody.appendChild(summaryRow);
+        }
+        
+        function displayRangeReport(data) {
+            const tableHead = document.getElementById('reportTableHead');
+            const tableBody = document.getElementById('reportTableBody');
+            
+            // Clear previous data
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+            
+            // Create header row
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `
+                <th>Student ID</th>
+                <th>Name</th>
+                <th>Present Days</th>
+                <th>Absent Days</th>
+                <th>Attendance %</th>
+            `;
+            tableHead.appendChild(headerRow);
+            
+            // Create data rows
+            data.attendanceSummary.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.studentId}</td>
+                    <td>${record.studentName}</td>
+                    <td>${record.presentDays}</td>
+                    <td>${record.absentDays}</td>
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar ${getProgressBarClass(record.percentage)}" 
+                                 role="progressbar" 
+                                 style="width: ${record.percentage}%;" 
+                                 aria-valuenow="${record.percentage}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                ${record.percentage}%
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        function getProgressBarClass(percentage) {
+            if (percentage >= 90) return 'bg-success';
+            if (percentage >= 75) return 'bg-info';
+            if (percentage >= 60) return 'bg-warning';
+            return 'bg-danger';
+        }
+        
+        function exportReportToCSV() {
+            // Get the table data
+            const table = document.querySelector('table');
+            let csv = [];
+            
+            // Get header
+            const headerRow = table.querySelector('thead tr');
+            const headers = Array.from(headerRow.querySelectorAll('th')).map(th => th.textContent);
+            csv.push(headers.join(','));
+            
+            // Get data rows
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const rowData = Array.from(row.querySelectorAll('td')).map(cell => {
+                    // Get text content without the progress bar
+                    return cell.textContent.trim().replace(/,/g, ' ');
+                });
+                csv.push(rowData.join(','));
+            });
+            
+            // Create and download CSV file
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'attendance_report.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+/* General Styles */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    border-bottom: none;
+    padding: 15px 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Sound Detection Styles */
+.model-container {
+    background-color: #f1f1f1;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#status {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+#status.detecting {
+    color: #007bff;
+}
+
+#status.success {
+    color: #28a745;
+}
+
+#status.error {
+    color: #dc3545;
+}
+
+/* Table Styles */
+.table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+/* Dashboard Cards */
+.card .card-title {
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.card h2 {
+    font-size: 2.5rem;
+    margin-bottom: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card h2 {
+        font-size: 2rem;
+    }
+}
+
+/* Teachable Machine Container */
+#teachable-machine-container {
+    width: 100%;
+    min-height: 300px;
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+#teachable-machine-container::before {
+    content: "Teachable Machine Model Will Be Loaded Here";
+    color: #6c757d;
+    font-style: italic;
+}
