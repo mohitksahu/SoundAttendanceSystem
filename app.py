@@ -150,12 +150,12 @@ def mark_attendance():
 
 @app.route('/get_attendance', methods=['GET'])
 def get_attendance():
-    date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    attendance_date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     
     try:
         try:
             conn = get_connection()
-            print(f"Database connection successful for get_attendance on date {date}")
+            print(f"Database connection successful for get_attendance on date {attendance_date}")
         except Exception as e:
             error_msg = f"Database connection error: {str(e)}"
             print(error_msg)
@@ -165,15 +165,17 @@ def get_attendance():
         cursor = conn.cursor()
         
         try:
+            # FIXED: Changed the bind variable name from :date to :attendance_date
+            # and changed the binding method to use a dictionary instead of a list
             cursor.execute(
                 """
                 SELECT s.STUDENT_ID, s.STUDENT_NAME, 
                        CASE WHEN a.PRESENT = 1 THEN 'Present' ELSE 'Absent' END as STATUS
                 FROM STUDENTS s
-                LEFT JOIN ATTENDANCE a ON s.STUDENT_ID = a.STUDENT_ID AND a.ATTENDANCE_DATE = TO_DATE(:date, 'YYYY-MM-DD')
+                LEFT JOIN ATTENDANCE a ON s.STUDENT_ID = a.STUDENT_ID AND a.ATTENDANCE_DATE = TO_DATE(:attendance_date, 'YYYY-MM-DD')
                 ORDER BY s.STUDENT_NAME
                 """,
-                [date]
+                {"attendance_date": attendance_date}  # Using dictionary with non-reserved keyword
             )
             
             columns = [col[0] for col in cursor.description]

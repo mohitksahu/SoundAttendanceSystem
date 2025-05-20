@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Sound Attendance System</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
@@ -34,10 +37,22 @@
         <div class="row">
             <div class="col-md-12">
                 <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h3 class="mb-0">Attendance Dashboard</h3>
+                        <div>
+                            <span id="lastUpdated" class="badge bg-light text-dark me-2">Last updated: Never</span>
+                            <button id="refreshButton" class="btn btn-sm btn-light" onclick="refreshAttendanceData()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
+                        <!-- Auto-refresh toggle -->
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
+                            <label class="form-check-label" for="autoRefreshToggle">Auto-refresh data (every 30
+                                seconds)</label>
+                        </div>
                         <div class="row mb-4">
                             <div class="col-md-4">
                                 <div class="card bg-primary text-white">
@@ -104,44 +119,89 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        let autoRefreshInterval;
+        const REFRESH_INTERVAL = 30000; // 30 seconds
+
+        document.addEventListener('DOMContentLoaded', function () {
             // Set today's date as default
             const today = new Date();
             const formattedDate = today.toISOString().split('T')[0];
             document.getElementById('attendanceDate').value = formattedDate;
-            
+
             // Load attendance data for today
             loadAttendanceData(formattedDate);
-            
+
             // Add event listener for date change
-            document.getElementById('attendanceDate').addEventListener('change', function() {
+            document.getElementById('attendanceDate').addEventListener('change', function () {
                 loadAttendanceData(this.value);
             });
+
+            // Add event listener for auto-refresh toggle
+            document.getElementById('autoRefreshToggle').addEventListener('change', function () {
+                if (this.checked) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+
+            // Start auto-refresh by default
+            startAutoRefresh();
         });
-        
+
+        function startAutoRefresh() {
+            // Clear any existing interval
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+
+            // Set new interval
+            autoRefreshInterval = setInterval(refreshAttendanceData, REFRESH_INTERVAL);
+            console.log("Auto-refresh started");
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                console.log("Auto-refresh stopped");
+            }
+        }
+
+        function refreshAttendanceData() {
+            const date = document.getElementById('attendanceDate').value;
+            loadAttendanceData(date);
+            console.log("Attendance data refreshed");
+        }
+
         function loadAttendanceData(date) {
             fetch(`/get_attendance?date=${date}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         updateDashboard(data.data);
+
+                        // Update last refreshed time
+                        const now = new Date();
+                        const timeString = now.toLocaleTimeString();
+                        document.getElementById('lastUpdated').textContent = `Last updated: ${timeString}`;
                     } else {
                         console.error('Error loading attendance data:', data.error);
                     }
                 })
                 .catch(error => console.error('Error:', error));
         }
-        
+
         function updateDashboard(attendanceData) {
             const tableBody = document.getElementById('attendanceTable');
             tableBody.innerHTML = '';
-            
+
             let presentCount = 0;
             let absentCount = 0;
-            
+
             attendanceData.forEach(student => {
                 const row = document.createElement('tr');
-                
+
                 row.innerHTML = `
                     <td>${student.STUDENT_ID}</td>
                     <td>${student.STUDENT_NAME}</td>
@@ -157,21 +217,21 @@
                         </button>
                     </td>
                 `;
-                
+
                 tableBody.appendChild(row);
-                
+
                 if (student.STATUS === 'Present') {
                     presentCount++;
                 } else {
                     absentCount++;
                 }
             });
-            
+
             document.getElementById('totalStudents').textContent = attendanceData.length;
             document.getElementById('presentToday').textContent = presentCount;
             document.getElementById('absentToday').textContent = absentCount;
         }
-        
+
         function toggleAttendance(studentId, present) {
             fetch('/mark_attendance', {
                 method: 'POST',
@@ -183,18 +243,19 @@
                     present: present
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reload attendance data
-                    const date = document.getElementById('attendanceDate').value;
-                    loadAttendanceData(date);
-                } else {
-                    console.error('Error updating attendance:', data.error);
-                }
-            })
-            .catch(error => console.error('Error:', error));
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload attendance data
+                        const date = document.getElementById('attendanceDate').value;
+                        loadAttendanceData(date);
+                    } else {
+                        console.error('Error updating attendance:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
     </script>
 </body>
+
 </html>

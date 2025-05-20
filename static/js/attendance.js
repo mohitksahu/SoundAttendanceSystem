@@ -138,6 +138,9 @@ function stopListening() {
         console.log("Stopping model listening");
         model.stopListening();
     }
+
+    // Refresh dashboard after stopping
+    refreshDashboard();
 }
 
 // Continuously classify audio
@@ -277,6 +280,149 @@ async function sendAttendanceToServer(studentId) {
         }
     } catch (error) {
         console.error('Error sending attendance to server:', error);
+    }
+}
+
+// Refresh the dashboard page with latest attendance data
+function refreshDashboard() {
+    console.log("Refreshing dashboard data");
+
+    // If we're already on the dashboard page
+    if (window.location.pathname.includes('dashboard')) {
+        // If there's a loadAttendanceData function available (from dashboard.html)
+        if (typeof loadAttendanceData === 'function') {
+            // Get today's date in YYYY-MM-DD format
+            const today = new Date().toISOString().split('T')[0];
+            loadAttendanceData(today);
+        }
+    } else {
+        // Show a notification that attendance was updated
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-info mt-3 d-flex justify-content-between align-items-center';
+
+        const messageContainer = document.createElement('div');
+        messageContainer.textContent = 'Attendance recorded! View details on the Dashboard.';
+        notification.appendChild(messageContainer);
+
+        const buttonContainer = document.createElement('div');
+
+        // Add a link to the dashboard
+        const link = document.createElement('a');
+        link.href = '/dashboard';
+        link.className = 'btn btn-primary btn-sm me-2';
+        link.textContent = 'Go to Dashboard';
+        buttonContainer.appendChild(link);
+
+        // Add a view here button
+        const viewHereBtn = document.createElement('button');
+        viewHereBtn.className = 'btn btn-outline-primary btn-sm';
+        viewHereBtn.textContent = 'View Today\'s Report';
+        viewHereBtn.onclick = function () {
+            // Request today's attendance summary from the server and display it
+            showAttendanceSummary();
+        };
+        buttonContainer.appendChild(viewHereBtn);
+
+        notification.appendChild(buttonContainer);
+
+        // Insert the notification before the attendance list
+        if (attendanceList && attendanceList.parentNode) {
+            // Look for existing notification and remove it
+            const existingNotification = document.querySelector('.alert.alert-info.mt-3');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            attendanceList.parentNode.insertBefore(notification, attendanceList);
+
+            // Don't remove the notification automatically to allow user to click the buttons
+        }
+    }
+}
+
+// Show attendance summary from the server
+async function showAttendanceSummary() {
+    statusDisplay.textContent = "Loading attendance summary...";
+    statusDisplay.className = "alert alert-info";
+
+    try {
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0];
+
+        // Fetch attendance data from server
+        const response = await fetch(`/get_attendance?date=${today}`);
+        const data = await response.json();
+
+        if (data.success) {
+            // Display summary in a modal or panel
+            const presentStudents = data.data.filter(student => student.STATUS === 'Present').length;
+            const totalStudents = data.data.length;
+            const absentStudents = totalStudents - presentStudents;
+            const attendanceRate = ((presentStudents / totalStudents) * 100).toFixed(1);
+
+            // Create or update summary panel
+            let summaryPanel = document.getElementById('attendanceSummaryPanel');
+            if (!summaryPanel) {
+                summaryPanel = document.createElement('div');
+                summaryPanel.id = 'attendanceSummaryPanel';
+                summaryPanel.className = 'card mt-4 shadow-sm';
+                document.querySelector('.card-body').appendChild(summaryPanel);
+            }
+
+            summaryPanel.innerHTML = `
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Today's Attendance Summary</h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h6>Total Students</h6>
+                                    <h3>${totalStudents}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h6>Present</h6>
+                                    <h3>${presentStudents}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h6>Absent</h6>
+                                    <h3>${absentStudents}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress mt-3" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: ${attendanceRate}%;" 
+                             aria-valuenow="${attendanceRate}" aria-valuemin="0" aria-valuemax="100">
+                            ${attendanceRate}% Present
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            statusDisplay.textContent = "Attendance summary loaded!";
+            statusDisplay.className = "alert alert-success";
+
+            // Scroll to the summary panel
+            summaryPanel.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            statusDisplay.textContent = "Error loading attendance summary: " + data.error;
+            statusDisplay.className = "alert alert-danger";
+        }
+    } catch (error) {
+        console.error('Error loading attendance summary:', error);
+        statusDisplay.textContent = "Error loading attendance summary. Please try again.";
+        statusDisplay.className = "alert alert-danger";
     }
 }
 
