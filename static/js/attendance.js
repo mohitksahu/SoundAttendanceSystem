@@ -53,7 +53,7 @@ async function init() {
     const modelURL = baseURL + "model.json";
     const metadataURL = baseURL + "metadata.json";
 
-    console.log("Model URL:", modelURL);
+    // Check if the URLs are correct
     console.log("Metadata URL:", metadataURL);
 
     try {
