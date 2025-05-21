@@ -88,9 +88,7 @@
                     </ul>
                 </div>
             </div>
-        </nav>
-
-        <!-- Preloader -->
+        </nav> <!-- Preloader -->
         <div class="preloader" id="preloader">
             <div class="preloader-spinner"></div>
         </div>
@@ -181,201 +179,101 @@
                 </div>
             </div>
         </div>
-    </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            let autoRefreshInterval;
+            const REFRESH_INTERVAL = 30000; // 30 seconds
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        let autoRefreshInterval;
-        const REFRESH_INTERVAL = 30000; // 30 seconds
-
-        // Authentication handling
-        document.addEventListener('DOMContentLoaded', function () {
-            // Check if user is already authenticated
-            checkAuthentication();
-
-            // Login form submission
-            const loginForm = document.getElementById('dashboardLoginForm');
-            loginForm.addEventListener('submit', handleLogin);
-
-            // Logout button
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    logout();
-                });
-            }
-
-            // Toggle password visibility
-            const togglePassword = document.getElementById('toggleAdminPassword');
-            const passwordField = document.getElementById('adminPassword');
-
-            if (togglePassword && passwordField) {
-                togglePassword.addEventListener('click', function () {
-                    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-                    passwordField.setAttribute('type', type);
-
-                    // Toggle eye icon
-                    togglePassword.querySelector('i').classList.toggle('bi-eye');
-                    togglePassword.querySelector('i').classList.toggle('bi-eye-slash');
-                });
-            }
-        });
-
-        function checkAuthentication() {
-            const isAuthenticated = localStorage.getItem('dashboardAuthenticated') === 'true';
-            const rememberMe = localStorage.getItem('rememberDashboard') === 'true';
-
-            if (isAuthenticated && rememberMe) {
-                // User is authenticated, show dashboard
-                document.getElementById('authModal').style.display = 'none';
-                document.getElementById('dashboardContent').style.display = 'block';
-
-                // Initialize dashboard
-                initializeDashboard();
-            } else {
-                // User is not authenticated, show login modal
-                document.getElementById('authModal').style.display = 'flex';
-                document.getElementById('dashboardContent').style.display = 'none';
-
-                // Hide preloader since we're showing the login screen
+            // Hide preloader when page is loaded
+            window.addEventListener('load', function () {
                 const preloader = document.getElementById('preloader');
-                if (preloader) {
-                    preloader.style.display = 'none';
-                }
-            }
-        }
-
-        function handleLogin(e) {
-            e.preventDefault();
-
-            const username = document.getElementById('adminUsername').value;
-            const password = document.getElementById('adminPassword').value;
-            const rememberMe = document.getElementById('rememberAdmin').checked;
-            const errorMsg = document.getElementById('loginErrorMsg');
-
-            // Check credentials (hardcoded in this example)
-            if (username === 'admin' && password === '12345678') {
-                // Store authentication state
-                localStorage.setItem('dashboardAuthenticated', 'true');
-                localStorage.setItem('rememberDashboard', rememberMe.toString());
-
-                // Hide login modal and show dashboard
-                document.getElementById('authModal').style.display = 'none';
-                document.getElementById('dashboardContent').style.display = 'block';
-
-                // Initialize dashboard
-                initializeDashboard();
-            } else {
-                // Show error message
-                errorMsg.style.display = 'block';
-
-                // Hide error message after 3 seconds
+                preloader.style.opacity = '0';
                 setTimeout(function () {
-                    errorMsg.style.display = 'none';
-                }, 3000);
-            }
-        }
-
-        function logout() {
-            // Clear authentication state
-            localStorage.removeItem('dashboardAuthenticated');
-            localStorage.removeItem('rememberDashboard');
-
-            // Redirect to home page
-            window.location.href = '/';
-        }
-
-        function initializeDashboard() {
-            // Set today's date as default
-            const today = new Date();
-            const formattedDate = today.toISOString().split('T')[0];
-            document.getElementById('attendanceDate').value = formattedDate;
-
-            // Load attendance data for today
-            loadAttendanceData(formattedDate);
-
-            // Add event listener for date change
-            document.getElementById('attendanceDate').addEventListener('change', function () {
-                loadAttendanceData(this.value);
+                    preloader.style.display = 'none';
+                }, 500);
             });
 
-            // Add event listener for auto-refresh toggle
-            document.getElementById('autoRefreshToggle').addEventListener('change', function () {
-                if (this.checked) {
-                    startAutoRefresh();
-                } else {
-                    stopAutoRefresh();
-                }
-            });
+            document.addEventListener('DOMContentLoaded', function () {
+                // Set today's date as default
+                const today = new Date();
+                const formattedDate = today.toISOString().split('T')[0];
+                document.getElementById('attendanceDate').value = formattedDate;
 
-            // Start auto-refresh by default
-            startAutoRefresh();
-        }
+                // Load attendance data for today
+                loadAttendanceData(formattedDate);
 
-        // Hide preloader when page is loaded
-        window.addEventListener('load', function () {
-            const preloader = document.getElementById('preloader');
-            preloader.style.opacity = '0';
-            setTimeout(function () {
-                preloader.style.display = 'none';
-            }, 500);
-        });
+                // Add event listener for date change
+                document.getElementById('attendanceDate').addEventListener('change', function () {
+                    loadAttendanceData(this.value);
+                });
 
-        function startAutoRefresh() {
-            // Clear any existing interval
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-            }
-
-            // Set new interval
-            autoRefreshInterval = setInterval(refreshAttendanceData, REFRESH_INTERVAL);
-            console.log("Auto-refresh started");
-        }
-
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
-                console.log("Auto-refresh stopped");
-            }
-        }
-
-        function refreshAttendanceData() {
-            const date = document.getElementById('attendanceDate').value;
-            loadAttendanceData(date);
-            console.log("Attendance data refreshed");
-        }
-
-        function loadAttendanceData(date) {
-            fetch(`/get_attendance?date=${date}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        updateDashboard(data.data);
-
-                        // Update last refreshed time
-                        const now = new Date();
-                        const timeString = now.toLocaleTimeString();
-                        document.getElementById('lastUpdated').textContent = `Last updated: ${timeString}`;
+                // Add event listener for auto-refresh toggle
+                document.getElementById('autoRefreshToggle').addEventListener('change', function () {
+                    if (this.checked) {
+                        startAutoRefresh();
                     } else {
-                        console.error('Error loading attendance data:', data.error);
+                        stopAutoRefresh();
                     }
-                })
-                .catch(error => console.error('Error:', error));
-        }
+                });
 
-        function updateDashboard(attendanceData) {
-            const tableBody = document.getElementById('attendanceTable');
-            tableBody.innerHTML = '';
+                // Start auto-refresh by default
+                startAutoRefresh();
+            });
 
-            let presentCount = 0;
-            let absentCount = 0;
+            function startAutoRefresh() {
+                // Clear any existing interval
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
 
-            attendanceData.forEach(student => {
-                const row = document.createElement('tr');
+                // Set new interval
+                autoRefreshInterval = setInterval(refreshAttendanceData, REFRESH_INTERVAL);
+                console.log("Auto-refresh started");
+            }
 
-                row.innerHTML = `
+            function stopAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                    console.log("Auto-refresh stopped");
+                }
+            }
+
+            function refreshAttendanceData() {
+                const date = document.getElementById('attendanceDate').value;
+                loadAttendanceData(date);
+                console.log("Attendance data refreshed");
+            }
+
+            function loadAttendanceData(date) {
+                fetch(`/get_attendance?date=${date}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateDashboard(data.data);
+
+                            // Update last refreshed time
+                            const now = new Date();
+                            const timeString = now.toLocaleTimeString();
+                            document.getElementById('lastUpdated').textContent = `Last updated: ${timeString}`;
+                        } else {
+                            console.error('Error loading attendance data:', data.error);
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+
+            function updateDashboard(attendanceData) {
+                const tableBody = document.getElementById('attendanceTable');
+                tableBody.innerHTML = '';
+
+                let presentCount = 0;
+                let absentCount = 0;
+
+                attendanceData.forEach(student => {
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
                     <td>${student.STUDENT_ID}</td>
                     <td>${student.STUDENT_NAME}</td>
                     <td>
@@ -391,44 +289,44 @@
                     </td>
                 `;
 
-                tableBody.appendChild(row);
+                    tableBody.appendChild(row);
 
-                if (student.STATUS === 'Present') {
-                    presentCount++;
-                } else {
-                    absentCount++;
-                }
-            });
-
-            document.getElementById('totalStudents').textContent = attendanceData.length;
-            document.getElementById('presentToday').textContent = presentCount;
-            document.getElementById('absentToday').textContent = absentCount;
-        }
-
-        function toggleAttendance(studentId, present) {
-            fetch('/mark_attendance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    student_id: studentId,
-                    present: present
-                })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Reload attendance data
-                        const date = document.getElementById('attendanceDate').value;
-                        loadAttendanceData(date);
+                    if (student.STATUS === 'Present') {
+                        presentCount++;
                     } else {
-                        console.error('Error updating attendance:', data.error);
+                        absentCount++;
                     }
+                });
+
+                document.getElementById('totalStudents').textContent = attendanceData.length;
+                document.getElementById('presentToday').textContent = presentCount;
+                document.getElementById('absentToday').textContent = absentCount;
+            }
+
+            function toggleAttendance(studentId, present) {
+                fetch('/mark_attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        present: present
+                    })
                 })
-                .catch(error => console.error('Error:', error));
-        }
-    </script>
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Reload attendance data
+                            const date = document.getElementById('attendanceDate').value;
+                            loadAttendanceData(date);
+                        } else {
+                            console.error('Error updating attendance:', data.error);
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        </script>
 </body>
 
 </html>
